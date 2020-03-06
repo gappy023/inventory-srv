@@ -1,32 +1,58 @@
 package main
 
 import (
-	"github.com/gappy023/inventory-srv/handler"
-	"github.com/gappy023/inventory-srv/subscriber"
-	"github.com/micro/go-micro/v2"
-	"github.com/micro/go-micro/v2/util/log"
+	"fmt"
 
-	inventory "github.com/gappy023/inventory-srv/proto/inventory"
+	"github.com/gappy023/basic"
+	"github.com/gappy023/basic/config"
+
+	"github.com/gappy023/inventory-srv/model"
+
+	"github.com/gappy023/inventory-srv/handler"
+	"github.com/micro/cli/v2"
+	"github.com/micro/go-micro/v2"
+
+	proto "github.com/gappy023/inventory-srv/proto/inventory"
+	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-micro/v2/registry/etcd"
+	"github.com/micro/go-micro/v2/util/log"
 )
 
 func main() {
-	// New Service
+	basic.Init()
+
+	// 使用etcd注册
+	micReg := etcd.NewRegistry(registryOptions)
+
+	// 新建服务
 	service := micro.NewService(
 		micro.Name("mu.micro.book.srv.inventory"),
+		micro.Registry(micReg),
 		micro.Version("latest"),
 	)
 
-	// Initialise service
-	service.Init()
+	// 服务初始化
+	service.Init(
+		micro.Action(func(c *cli.Context) error {
+			// 初始化模型层
+			model.Init()
+			// 初始化handler
+			handler.Init()
 
-	// Register Handler
-	inventory.RegisterInventoryHandler(service.Server(), new(handler.Inventory))
+			return nil
+		}),
+	)
 
-	// Register Struct as Subscriber
-	micro.RegisterSubscriber("mu.micro.book.srv.inventory", service.Server(), new(subscriber.Inventory))
+	// 注册服务
+	proto.RegisterInventoryHandler(service.Server(), new(handler.Service))
 
-	// Run service
+	// 启动服务
 	if err := service.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func registryOptions(ops *registry.Options) {
+	etcdCfg := config.GetEtcdConfig()
+	ops.Addrs = []string{fmt.Sprintf("%s:%d", etcdCfg.GetHost(), etcdCfg.GetPort())}
 }
