@@ -1,1 +1,0 @@
-module microservice/part1/inventory-srv
