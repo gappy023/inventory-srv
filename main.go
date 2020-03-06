@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/micro/go-micro/v2/util/log"
+	"github.com/gappy023/inventory-srv/handler"
+	"github.com/gappy023/inventory-srv/subscriber"
 	"github.com/micro/go-micro/v2"
-	"microservice/part1/inventory-srv/handler"
-	"microservice/part1/inventory-srv/subscriber"
+	"github.com/micro/go-micro/v2/util/log"
 
-	inventory "microservice/part1/inventory-srv/proto/inventory"
+	inventory "github.com/gappy023/inventory-srv/proto/inventory"
 )
 
 func main() {

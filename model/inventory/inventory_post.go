@@ -3,10 +3,10 @@ package inventory
 import (
 	"fmt"
 
+	"github.com/gappy023/basic/common"
+	"github.com/gappy023/basic/db"
 	proto "github.com/gappy023/inventory-srv/proto/inventory"
 	log "github.com/micro/go-micro/v2/logger"
-	"github.com/microservice/part1/basic/common"
-	"github.com/microservice/part1/basic/db"
 )
 
 // Sell 销存
