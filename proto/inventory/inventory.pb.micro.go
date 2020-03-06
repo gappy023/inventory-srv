@@ -34,9 +34,8 @@ var _ server.Option
 // Client API for Inventory service
 
 type InventoryService interface {
-	Call(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error)
-	Stream(ctx context.Context, in *StreamingRequest, opts ...client.CallOption) (Inventory_StreamService, error)
-	PingPong(ctx context.Context, opts ...client.CallOption) (Inventory_PingPongService, error)
+	Sell(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error)
+	Confirm(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error)
 }
 
 type inventoryService struct {
@@ -51,8 +50,8 @@ func NewInventoryService(name string, c client.Client) InventoryService {
 	}
 }
 
-func (c *inventoryService) Call(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error) {
-	req := c.c.NewRequest(c.name, "Inventory.Call", in)
+func (c *inventoryService) Sell(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.name, "Inventory.Sell", in)
 	out := new(Response)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -61,119 +60,27 @@ func (c *inventoryService) Call(ctx context.Context, in *Request, opts ...client
 	return out, nil
 }
 
-func (c *inventoryService) Stream(ctx context.Context, in *StreamingRequest, opts ...client.CallOption) (Inventory_StreamService, error) {
-	req := c.c.NewRequest(c.name, "Inventory.Stream", &StreamingRequest{})
-	stream, err := c.c.Stream(ctx, req, opts...)
+func (c *inventoryService) Confirm(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.name, "Inventory.Confirm", in)
+	out := new(Response)
+	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	if err := stream.Send(in); err != nil {
-		return nil, err
-	}
-	return &inventoryServiceStream{stream}, nil
-}
-
-type Inventory_StreamService interface {
-	Context() context.Context
-	SendMsg(interface{}) error
-	RecvMsg(interface{}) error
-	Close() error
-	Recv() (*StreamingResponse, error)
-}
-
-type inventoryServiceStream struct {
-	stream client.Stream
-}
-
-func (x *inventoryServiceStream) Close() error {
-	return x.stream.Close()
-}
-
-func (x *inventoryServiceStream) Context() context.Context {
-	return x.stream.Context()
-}
-
-func (x *inventoryServiceStream) SendMsg(m interface{}) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryServiceStream) RecvMsg(m interface{}) error {
-	return x.stream.Recv(m)
-}
-
-func (x *inventoryServiceStream) Recv() (*StreamingResponse, error) {
-	m := new(StreamingResponse)
-	err := x.stream.Recv(m)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *inventoryService) PingPong(ctx context.Context, opts ...client.CallOption) (Inventory_PingPongService, error) {
-	req := c.c.NewRequest(c.name, "Inventory.PingPong", &Ping{})
-	stream, err := c.c.Stream(ctx, req, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &inventoryServicePingPong{stream}, nil
-}
-
-type Inventory_PingPongService interface {
-	Context() context.Context
-	SendMsg(interface{}) error
-	RecvMsg(interface{}) error
-	Close() error
-	Send(*Ping) error
-	Recv() (*Pong, error)
-}
-
-type inventoryServicePingPong struct {
-	stream client.Stream
-}
-
-func (x *inventoryServicePingPong) Close() error {
-	return x.stream.Close()
-}
-
-func (x *inventoryServicePingPong) Context() context.Context {
-	return x.stream.Context()
-}
-
-func (x *inventoryServicePingPong) SendMsg(m interface{}) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryServicePingPong) RecvMsg(m interface{}) error {
-	return x.stream.Recv(m)
-}
-
-func (x *inventoryServicePingPong) Send(m *Ping) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryServicePingPong) Recv() (*Pong, error) {
-	m := new(Pong)
-	err := x.stream.Recv(m)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // Server API for Inventory service
 
 type InventoryHandler interface {
-	Call(context.Context, *Request, *Response) error
-	Stream(context.Context, *StreamingRequest, Inventory_StreamStream) error
-	PingPong(context.Context, Inventory_PingPongStream) error
+	Sell(context.Context, *Request, *Response) error
+	Confirm(context.Context, *Request, *Response) error
 }
 
 func RegisterInventoryHandler(s server.Server, hdlr InventoryHandler, opts ...server.HandlerOption) error {
 	type inventory interface {
-		Call(ctx context.Context, in *Request, out *Response) error
-		Stream(ctx context.Context, stream server.Stream) error
-		PingPong(ctx context.Context, stream server.Stream) error
+		Sell(ctx context.Context, in *Request, out *Response) error
+		Confirm(ctx context.Context, in *Request, out *Response) error
 	}
 	type Inventory struct {
 		inventory
@@ -186,91 +93,10 @@ type inventoryHandler struct {
 	InventoryHandler
 }
 
-func (h *inventoryHandler) Call(ctx context.Context, in *Request, out *Response) error {
-	return h.InventoryHandler.Call(ctx, in, out)
+func (h *inventoryHandler) Sell(ctx context.Context, in *Request, out *Response) error {
+	return h.InventoryHandler.Sell(ctx, in, out)
 }
 
-func (h *inventoryHandler) Stream(ctx context.Context, stream server.Stream) error {
-	m := new(StreamingRequest)
-	if err := stream.Recv(m); err != nil {
-		return err
-	}
-	return h.InventoryHandler.Stream(ctx, m, &inventoryStreamStream{stream})
-}
-
-type Inventory_StreamStream interface {
-	Context() context.Context
-	SendMsg(interface{}) error
-	RecvMsg(interface{}) error
-	Close() error
-	Send(*StreamingResponse) error
-}
-
-type inventoryStreamStream struct {
-	stream server.Stream
-}
-
-func (x *inventoryStreamStream) Close() error {
-	return x.stream.Close()
-}
-
-func (x *inventoryStreamStream) Context() context.Context {
-	return x.stream.Context()
-}
-
-func (x *inventoryStreamStream) SendMsg(m interface{}) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryStreamStream) RecvMsg(m interface{}) error {
-	return x.stream.Recv(m)
-}
-
-func (x *inventoryStreamStream) Send(m *StreamingResponse) error {
-	return x.stream.Send(m)
-}
-
-func (h *inventoryHandler) PingPong(ctx context.Context, stream server.Stream) error {
-	return h.InventoryHandler.PingPong(ctx, &inventoryPingPongStream{stream})
-}
-
-type Inventory_PingPongStream interface {
-	Context() context.Context
-	SendMsg(interface{}) error
-	RecvMsg(interface{}) error
-	Close() error
-	Send(*Pong) error
-	Recv() (*Ping, error)
-}
-
-type inventoryPingPongStream struct {
-	stream server.Stream
-}
-
-func (x *inventoryPingPongStream) Close() error {
-	return x.stream.Close()
-}
-
-func (x *inventoryPingPongStream) Context() context.Context {
-	return x.stream.Context()
-}
-
-func (x *inventoryPingPongStream) SendMsg(m interface{}) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryPingPongStream) RecvMsg(m interface{}) error {
-	return x.stream.Recv(m)
-}
-
-func (x *inventoryPingPongStream) Send(m *Pong) error {
-	return x.stream.Send(m)
-}
-
-func (x *inventoryPingPongStream) Recv() (*Ping, error) {
-	m := new(Ping)
-	if err := x.stream.Recv(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+func (h *inventoryHandler) Confirm(ctx context.Context, in *Request, out *Response) error {
+	return h.InventoryHandler.Confirm(ctx, in, out)
 }
